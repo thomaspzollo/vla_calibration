@@ -1,17 +1,9 @@
-import torch
-from torch import nn, optim
-from torch.nn import functional as F
 import pickle as pkl
 from scipy.special import softmax
 import numpy as np
 from pathlib import Path
 import calibration as cal
-import matplotlib.pyplot as plt
-from scipy.optimize import minimize
-from scipy.stats import entropy
-from tqdm import tqdm
-import os
-
+from typing import Tuple
 
 
 def cross_entropy(y_true, y_pred):
@@ -364,3 +356,78 @@ def train_test_split_three_way(X, z, y, test_size=0.2, random_state=42):
     return X_train, X_test, z_train, z_test, y_train, y_test
 
 
+def average_confidences(correct, probs) -> Tuple[float, float]:
+    """
+    (mean_confidence_incorrect, mean_confidence_correct)
+    """
+    correct = np.asarray(correct).ravel()
+    probs   = np.asarray(probs).ravel()
+
+    incorrect = correct == 0
+    correct_m = correct == 1          # mask for correct examples
+
+    avg_incorrect = probs[incorrect].mean() if incorrect.size and incorrect.any() else np.nan
+    avg_correct   = probs[correct_m].mean() if correct_m.size and correct_m.any() else np.nan
+    return avg_incorrect, avg_correct
+
+
+def std_confidences(correct, probs) -> Tuple[float, float]:
+    """
+    (mean_confidence_incorrect, mean_confidence_correct)
+    """
+    correct = np.asarray(correct).ravel()
+    probs   = np.asarray(probs).ravel()
+
+    incorrect = correct == 0
+    correct_m = correct == 1          # mask for correct examples
+
+    avg_incorrect = probs[incorrect].std() if incorrect.size and incorrect.any() else np.nan
+    avg_correct   = probs[correct_m].std() if correct_m.size and correct_m.any() else np.nan
+    return avg_incorrect, avg_correct
+
+
+def pct_high_confidence(correct, probs, t: float) -> Tuple[float, float]:
+    """
+    (pct_incorrect_high_conf, pct_correct_high_conf):
+    within each class (incorrect / correct), the % of examples whose confidence > t
+    """
+    correct = np.asarray(correct).ravel()
+    probs   = np.asarray(probs).ravel()
+
+    incorrect = correct == 0
+    correct_m = correct == 1
+
+    pct_incorrect = (
+        np.nan if not incorrect.any()
+        else (probs[incorrect] > t).mean()
+    )
+    pct_correct = (
+        np.nan if not correct_m.any()
+        else (probs[correct_m] > t).mean()
+    )
+    return pct_incorrect, pct_correct
+
+
+def trailing_average(x: np.ndarray, k: int) -> np.ndarray:
+    if k < 0:
+        raise ValueError("k must be non-negative")
+    if x.ndim != 1:
+        raise ValueError("x must be a 1-D array")
+    n = len(x)
+    if k == 0 or n == 0:
+        return x.copy()          # nothing to do
+
+    # prefix sums with a leading 0
+    cumsum = np.concatenate(([0.0], np.cumsum(x, dtype=float)))
+
+    # indices that have enough history for the fixed window
+    idx = np.arange(k, n)
+
+    # window sums: S(i) - S(i-k)
+    window_totals = cumsum[idx + 1] - cumsum[idx - k]
+
+    # allocate output and fill the averaged part
+    y = x.astype(float, copy=True)
+    y[idx] = window_totals / (k + 1)
+
+    return y
