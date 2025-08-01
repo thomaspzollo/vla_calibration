@@ -1,23 +1,11 @@
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
-import pickle as pkl
-from scipy.special import softmax
 import numpy as np
-import scipy.stats
-from pathlib import Path
-import calibration as cal
-import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-from scipy.stats import entropy
 from tqdm import tqdm
-import os
 
 
-
-# def get_ece(conf, labels, n_bins=15, p=1):
-#     ece = cal.lower_bound_scaling_ce(conf, labels, p=p, debias=False, num_bins=n_bins, binning_scheme=cal.get_equal_bins, mode='top-label')
-#     return ece
 
 
 class TempScaler(nn.Module):
