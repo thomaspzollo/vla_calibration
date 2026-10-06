@@ -17,7 +17,7 @@ def cross_entropy(y_true, y_pred):
     Returns:
     float: Binary cross-entropy loss.
     """
-    epsilon = 1e-12  # To avoid log(0)
+    epsilon = 1e-6  # To avoid log(0)
     y_pred = np.clip(y_pred, epsilon, 1. - epsilon)  # Clip predictions
     loss = -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
     return loss
@@ -47,18 +47,18 @@ def get_base_data(data_save_dir, top_n_steps=1):
             probs = softmax(logits, -1)
 
             episode_probs.append(probs)
-            episode_actions.append(step["actions"])
+            # episode_actions.append(step["actions"])
 
         episode_probs = np.stack(episode_probs)
-        episode_actions = np.stack(episode_actions)
+        # episode_actions = np.stack(episode_actions)
 
         all_probs.append(episode_probs)
-        all_actions.append(episode_actions)
+        # all_actions.append(episode_actions)
 
         correct.append(int(episode["done"]))
 
     all_probs = np.stack(all_probs)
-    all_actions = np.stack(all_actions)
+    # all_actions = np.stack(all_actions)
     correct = np.array(correct)
 
     return all_probs, all_actions, correct
